@@ -47,7 +47,8 @@ if healthy; then
 fi
 
 echo "Health check FAILED for $NAME"
-docker logs --tail 30 "$NAME" || true
+echo "Why (last causes in the container log):"
+docker logs "$NAME" 2>&1 | grep -E 'Caused by|APPLICATION FAILED|Description:' | tail -3 | cut -c1-200 || true
 if [ -n "$PREVIOUS" ]; then
   echo "Rolling back to $PREVIOUS"
   start "$PREVIOUS"

@@ -12,11 +12,12 @@ usage() {
 Usage: scripts/demo.sh <exercise>
 
   trivial-change    empty commit: shows that a commit alone triggers a build   -> GREEN, waits at Approval
-  new-version       bumps the pom version (1.0.0 -> 1.0.1)                    -> GREEN, staging != production
+  new-version       changes the version the API reports (1.0.0-demo1)       -> GREEN, staging != production
   break-test        a unit test asserts a wrong value                         -> RED at Test
   drop-coverage     adds a class with no tests (coverage < 80%)               -> RED at Coverage Gate
   pmd-violation     adds a System.out.println                                 -> RED at Static Analysis
 
+  fix               revert the last demo commit with a new commit (the normal way to repair main)
   status            commits since the baseline tag ($BASELINE_TAG) and who made them
   restore           undo every demo commit (git reset --hard $BASELINE_TAG), only if it is safe
   restore --check   same checks, changes nothing
@@ -77,6 +78,16 @@ cmd_restore() {
   fi
 }
 
+cmd_fix() {
+  local subject; subject="$(git log -1 --format=%s)"
+  is_demo_commit HEAD || die "HEAD is not a demo commit; nothing to fix."
+  git show -s --format=%B HEAD | grep -q "^$MARK: fix" && die "HEAD already is a fix. Use restore to go back to the baseline."
+  git revert --no-commit HEAD 2>/dev/null || { git revert --abort 2>/dev/null; die "HEAD is an empty commit: nothing to revert."; }
+  git commit -q -m "fix(demo): revert \"$subject\"" -m "$MARK: fix"
+  say "Committed: $(git log -1 --format='%h %s')"
+  say "Jenkins polls every minute: follow it with  scripts/jenkins.sh wait next"
+}
+
 cmd_baseline() {
   require_clean_main
   local c
@@ -90,7 +101,7 @@ cmd_baseline() {
 # ---- exercises -----------------------------------------------------------------------------
 # commit <exercise> <subject>: commits what is staged/changed, tagging it with the trailer
 commit() {
-  git add -A -- src pom.xml
+  git add -A -- src
   git commit -q --allow-empty -m "$2" -m "$MARK: $1"
   say "Committed: $(git log -1 --format='%h %s')"
   say "Jenkins polls every minute: follow it with  scripts/jenkins.sh wait next"
@@ -102,12 +113,14 @@ UNTESTED="src/main/java/ar/edu/utn/frc/turnos/service/CancellationFeePolicy.java
 
 ex_trivial_change() { commit trivial-change "chore(demo): empty commit to trigger the pipeline"; }
 
+# Changes the version the API reports (-demo1, -demo2, ...). The pom is NOT touched on purpose:
+# a different pom.xml invalidates the Docker dependency cache and the build takes minutes longer.
 ex_new_version() {
-  local cur new
-  cur="$(sed -n 's|^  <version>\(.*\)</version>$|\1|p' pom.xml | head -1)"
-  new="${cur%.*}.$(( ${cur##*.} + 1 ))"
-  sed -i "s|^  <version>$cur</version>|  <version>$new</version>|" pom.xml
-  commit new-version "chore(demo): bump version $cur -> $new"
+  local props="src/main/resources/application.properties" n
+  n="$(sed -n 's|^app.version=@project.version@-demo\([0-9]*\)$|\1|p' "$props")"
+  n=$(( ${n:-0} + 1 ))
+  sed -i "s|^app.version=.*|app.version=@project.version@-demo$n|" "$props"
+  commit new-version "chore(demo): report version -demo$n"
 }
 
 ex_break_test() {
@@ -173,6 +186,7 @@ case "${1:-}" in
     require_clean_main
     "ex_$(echo "$1" | tr - _)" ;;
   status)  cmd_status ;;
+  fix)     require_clean_main; cmd_fix ;;
   restore) shift; cmd_restore "$@" ;;
   baseline) cmd_baseline ;;
   -h|--help|help) usage 0 ;;
