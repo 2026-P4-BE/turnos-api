@@ -18,7 +18,9 @@ start() {
 # Health check from inside the Docker network (Jenkins reaches the container by name)
 healthy() {
   for i in $(seq 1 30); do
-    if curl -fs "http://$NAME:8080/actuator/health" | grep -q '"status":"UP"'; then
+    # Container crashed: no point in waiting
+    [ "$(docker inspect -f '{{.State.Running}}' "$NAME")" = "true" ] || return 1
+    if curl -fs --max-time 3 "http://$NAME:8080/actuator/health" | grep -q '"status":"UP"'; then
       return 0
     fi
     sleep 3
