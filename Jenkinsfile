@@ -3,10 +3,17 @@ pipeline {
 
     options {
         timestamps()
-        timeout(time: 40, unit: 'MINUTES')
+        timeout(time: 60, unit: 'MINUTES')
         disableConcurrentBuilds()
         skipDefaultCheckout(true)
         buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        // Classroom switch: the new production version starts with a bad configuration,
+        // the health check fails and scripts/deploy.sh rolls back to the previous image.
+        booleanParam(name: 'BREAK_PRODUCTION', defaultValue: false,
+            description: 'Demo: make the production deploy unhealthy to see the rollback')
     }
 
     environment {
@@ -82,20 +89,22 @@ pipeline {
                 // Deploys, waits for /actuator/health, rolls back on failure (see scripts/deploy.sh)
                 sh 'sh scripts/deploy.sh turnos-staging staging "$IMAGE" 8081'
                 // Smoke test: the staging container must answer as "staging"
-                sh 'curl -fs http://turnos-staging:8080/api/version | grep -q staging'
+                sh 'curl -fs --max-time 5 http://turnos-staging:8080/api/version | grep -q staging'
             }
         }
 
         stage('Approval') {
             steps {
                 // Continuous DELIVERY: a human decides when production gets the tested image.
-                timeout(time: 15, unit: 'MINUTES') {
+                // If nobody answers in time the build is ABORTED (and stops blocking the queue).
+                timeout(time: 30, unit: 'MINUTES') {
                     input message: "Deploy ${env.IMAGE} to PRODUCTION?", ok: 'Deploy to production'
                 }
             }
         }
 
         stage('Deploy Production') {
+            environment { BREAK_DEPLOY = "${params.BREAK_PRODUCTION}" }
             steps {
                 sh 'sh scripts/deploy.sh turnos-prod production "$IMAGE" 8082'
             }

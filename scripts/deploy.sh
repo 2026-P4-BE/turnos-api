@@ -9,10 +9,19 @@ NETWORK="turnos-net"
 # Remember what is running now, so we can go back to it
 PREVIOUS="$(docker inspect -f '{{.Config.Image}}' "$NAME" 2>/dev/null || true)"
 
+# Classroom switch: BREAK_DEPLOY=true starts the NEW version with a broken datasource URL,
+# so it crashes on boot (a bad config reaching production). The rollback never gets it.
+FAULT=""
+if [ "${BREAK_DEPLOY:-false}" = "true" ]; then
+  FAULT="--env=SPRING_DATASOURCE_URL=jdbc:postgresql://nowhere/none"
+  echo "BREAK_DEPLOY=true: injecting a bad configuration on purpose"
+fi
+
+# start <image> [extra docker run flag]
 start() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
   docker run -d --name "$NAME" --network "$NETWORK" -p "$HOST_PORT:8080" \
-    -e APP_ENV="$APP_ENV" --memory 256m "$1" >/dev/null
+    -e APP_ENV="$APP_ENV" --memory 256m ${2:+"$2"} "$1" >/dev/null
 }
 
 # Health check from inside the Docker network (Jenkins reaches the container by name)
@@ -30,7 +39,7 @@ healthy() {
 
 docker pull "$IMAGE"
 echo "Deploying $IMAGE as $NAME (APP_ENV=$APP_ENV, port $HOST_PORT)"
-start "$IMAGE"
+start "$IMAGE" "$FAULT"
 
 if healthy; then
   echo "Health check OK for $NAME"
