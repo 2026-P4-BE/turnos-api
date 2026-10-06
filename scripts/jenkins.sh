@@ -61,7 +61,8 @@ cmd_status() {
 cmd_wait() {
   local target="${1:-}" start=$SECONDS
   if [ "$target" = "next" ]; then target=$(( $(last_build) + 1 )); fi
-  target="$(resolve "$target")"
+  [ -n "$target" ] || target="$(last_build)"
+  [ "$target" != 0 ] || target=1   # nothing yet: wait for the first build
   say "Waiting for build #$target (Ctrl+C to stop waiting; the build keeps going)..."
   local seen="" d status stages
   while [ $((SECONDS - start)) -lt 1800 ]; do
