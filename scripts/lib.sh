@@ -23,8 +23,9 @@ bad()  { printf '  [FAIL] %s\n' "$*"; }
 die()  { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 # ---- Jenkins REST (curl always has a timeout; -g keeps [ ] in URLs from being globbed) ----
-JAR="$(mktemp)"
-trap 'rm -f "$JAR"' EXIT
+JAR_FILE="$(mktemp)"
+trap 'rm -f "$JAR_FILE"' EXIT
+JAR="$(cygpath -m "$JAR_FILE" 2>/dev/null || echo "$JAR_FILE")"   # native curl.exe needs C:/ paths
 
 jenkins_up() {
   [ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$JENKINS_URL/login" 2>/dev/null)" = "200" ]
