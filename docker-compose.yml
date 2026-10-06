@@ -1,0 +1,44 @@
+name: turnos-ci
+
+services:
+  jenkins:
+    build: ./jenkins
+    image: turnos-jenkins:1.0
+    container_name: turnos-jenkins
+    # DEMO SIMPLIFICATION: root so the container can use the host Docker socket.
+    # In a real setup use a dedicated agent or a socket proxy.
+    user: root
+    ports:
+      - "8090:8080"
+    environment:
+      # Heap cap + skip setup wizard + allow the local git repo as pipeline SCM
+      JAVA_OPTS: >-
+        -Xmx512m
+        -Djenkins.install.runSetupWizard=false
+        -Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true
+      MAVEN_OPTS: "-Xmx384m"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:/repos/turnos-api:ro
+    networks:
+      - turnos-net
+
+  registry:
+    image: registry:2
+    container_name: turnos-registry
+    ports:
+      - "5001:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+    networks:
+      - turnos-net
+
+volumes:
+  jenkins_home:
+  registry_data:
+
+networks:
+  # Fixed name: the pipeline attaches the app containers to it, so Jenkins reaches them by name
+  turnos-net:
+    name: turnos-net

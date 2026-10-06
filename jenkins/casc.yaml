@@ -1,0 +1,39 @@
+jenkins:
+  systemMessage: "turnos-api CI/CD demo - Jenkins configured as code (jenkins/casc.yaml)"
+  numExecutors: 2
+  # DEMO ONLY: throwaway local credentials (admin / admin). Never reuse this outside a classroom laptop.
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+unclassified:
+  location:
+    url: "http://localhost:8090/"
+
+# Seed: creates the pipeline job at startup, no manual UI step.
+jobs:
+  - script: >
+      pipelineJob('turnos-api') {
+        description('CI/CD pipeline for turnos-api. Defined in the Jenkinsfile of the repository.')
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote { url('file:///repos/turnos-api') }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile')
+            lightweight(false)
+          }
+        }
+        triggers {
+          scm('* * * * *')
+        }
+      }
