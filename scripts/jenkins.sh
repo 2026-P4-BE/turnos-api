@@ -70,7 +70,10 @@ cmd_wait() {
       [ "$stages" = "$seen" ] || { say "  [$((SECONDS - start))s] $status  $stages"; seen="$stages"; }
       case "$status" in
         PAUSED_PENDING_INPUT) say "Paused at Approval after $((SECONDS - start))s."; return 0 ;;
-        SUCCESS|FAILED|ABORTED|UNSTABLE|NOT_EXECUTED) say "Finished: $status after $((SECONDS - start))s."; return 0 ;;
+        NOT_EXECUTED) # just created (not started yet) or finished without running anything
+          jget "$JENKINS_URL/job/$JOB/$target/api/json?tree=building" | grep -q '"building":false' \
+            && { say "Finished: $status"; return 0; } ;;
+        SUCCESS|FAILED|ABORTED|UNSTABLE) say "Finished: $status after $((SECONDS - start))s."; return 0 ;;
       esac
     fi
     sleep 3
