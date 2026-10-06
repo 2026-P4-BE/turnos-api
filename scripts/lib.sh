@@ -4,7 +4,8 @@
 # Git Bash would rewrite arguments such as /var/jenkins_home into C:/... : switch that off.
 export MSYS_NO_PATHCONV=1
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# pwd -W gives C:/... in Git Bash (docker.exe does not understand /c/...); plain pwd elsewhere
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && { pwd -W 2>/dev/null || pwd; })"
 JENKINS_URL="${JENKINS_URL:-http://localhost:8090}"
 JENKINS_AUTH="${JENKINS_AUTH:-admin:admin}"   # throwaway demo credentials, see jenkins/casc.yaml
 JOB="turnos-api"
