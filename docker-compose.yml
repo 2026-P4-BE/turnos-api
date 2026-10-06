@@ -19,13 +19,20 @@ services:
       MAVEN_OPTS: "-Xmx384m"
     volumes:
       - jenkins_home:/var/jenkins_home
+      # Maven cache (HOME is /root because of "user: root"): survives container recreation
+      - maven_cache:/root/.m2
       - /var/run/docker.sock:/var/run/docker.sock
       - .:/repos/turnos-api:ro
     networks:
       - turnos-net
+    # Lets "docker compose up --wait" (and scripts/doctor.sh) know when Jenkins is really ready
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "--max-time", "3", "http://localhost:8080/login"]
+      interval: 5s
+      retries: 60
 
   registry:
-    image: registry:2
+    image: registry:2.8.3
     container_name: turnos-registry
     ports:
       - "5001:5000"
@@ -37,6 +44,7 @@ services:
 volumes:
   jenkins_home:
   registry_data:
+  maven_cache:
 
 networks:
   # Fixed name: the pipeline attaches the app containers to it, so Jenkins reaches them by name

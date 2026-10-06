@@ -1,8 +1,9 @@
-FROM jenkins/jenkins:lts-jdk17
+# Pinned: "lts-jdk17" moves every few weeks and would change the server under our feet
+FROM jenkins/jenkins:2.541.3-lts-jdk17
 
 USER root
 
-# Maven (the pipeline builds with it) + curl/git are already in the base image
+# Maven (the pipeline builds with it). Debian package: its version follows the pinned base image.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends maven \
     && rm -rf /var/lib/apt/lists/*
@@ -18,7 +19,7 @@ RUN ARCH="$(uname -m)" \
 # fails with "detected dubious ownership in repository"
 RUN git config --system --add safe.directory '*'
 
-# Plugins are pinned by name in plugins.txt and installed at build time (no UI clicks)
+# Plugins are pinned by name and version in plugins.txt and installed at build time (no UI clicks)
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
 RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
