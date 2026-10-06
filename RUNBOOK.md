@@ -20,11 +20,11 @@ Credenciales de Jenkins: `admin` / `admin`. URL: http://localhost:8090
 
 ## 0. Antes de la clase
 
-**Estado en el que debería encontrar la máquina:** Jenkins y el registro **levantados**, historial de builds **vacío**, `main` en el tag `class-baseline`, sin contenedores `turnos-staging` / `turnos-prod`. El build #1 arranca solo dentro del primer minuto.
+**Estado en el que debería encontrar la máquina:** laboratorio **apagado y limpio** (sin contenedores, sin volúmenes de Jenkins ni de registro; solo quedan las imágenes y la caché de Maven), `main` en el tag `class-baseline`. Al levantarlo es un Jenkins nuevo: el build #1 arranca solo dentro del primer minuto. Si en cambio lo encuentra levantado con builds viejos: `scripts/reset.sh`.
 
 - [ ] Docker Desktop abierto (ícono quieto). Cerrar otros laboratorios si hay poca memoria: Docker tiene 4 GB.
-- [ ] `scripts/doctor.sh` termina en `READY`. Si dice `NOT READY`, cada línea `fix:` indica qué ejecutar.
-- [ ] Si Jenkins estaba apagado: `docker compose up -d --wait` (10 a 40 s) y repetir `doctor.sh`.
+- [ ] Levantar: `docker compose up -d --wait` (25 a 40 s), luego `scripts/doctor.sh`. Con Jenkins apagado, `doctor.sh` marca `NOT READY` y lo indica.
+- [ ] `scripts/doctor.sh` termina en `READY` (con advertencias si ya arrancó el build #1). Si dice `NOT READY`, cada línea `fix:` indica qué ejecutar.
 - [ ] Si quedó algo de una clase anterior (advertencia de builds o commits): `scripts/reset.sh`.
 - [ ] Abrir http://localhost:8090/job/turnos-api/ (ingresar con admin/admin) y dejarlo en pantalla.
 - [ ] Tener a mano `Jenkinsfile`, `jenkins/casc.yaml`, `jenkins/Dockerfile` en el editor.
