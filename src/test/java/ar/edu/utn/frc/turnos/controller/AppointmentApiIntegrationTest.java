@@ -10,6 +10,7 @@ import com.jayway.jsonpath.JsonPath;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -23,6 +24,10 @@ class AppointmentApiIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    // Filtered from the pom: the test keeps passing when the project version is bumped
+    @Value("${app.version}")
+    private String appVersion;
 
     private ResultActions createAppointment(String professional, LocalDateTime slot)
             throws Exception {
@@ -92,7 +97,7 @@ class AppointmentApiIntegrationTest {
     void exposesVersionAndEnvironment() throws Exception {
         mockMvc.perform(get("/api/version"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.version").value("1.0.0"))
+                .andExpect(jsonPath("$.version").value(appVersion))
                 .andExpect(jsonPath("$.env").value("local"));
     }
 
